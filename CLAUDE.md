@@ -46,16 +46,53 @@ The application follows a three-layer architecture:
 2. **Storage Layer**: Uses DuckDB as an embedded analytical database to store and index log entries for fast querying
 3. **Presentation Layer**: Ratatui-based TUI that provides an interactive interface for viewing, searching, and filtering logs
 
+### Ingestion Layer (Implemented)
+
+Located in `src/ingestion/`:
+
+- **models.rs**: Defines `JsonLog` struct that stores all log fields in a flexible `HashMap<String, serde_json::Value>` format
+  - Provides helper methods: `get_timestamp_ms()`, `get_message()`, `get_level()`, `timestamp()`
+  - Design is extensible: not tied to Pino format, can handle any JSON log structure
+
+- **parser.rs**: Contains `parse_json_line()` function
+  - Parses JSON strings into `JsonLog` instances
+  - Validates non-empty input and valid JSON
+  - Returns `Result<JsonLog>` with proper error handling
+
+- **reader.rs**: Provides `LogFileReader` for buffered file reading
+  - Reads log files line-by-line efficiently
+  - Tracks line numbers for error reporting
+  - Returns `Vec<(usize, Result<JsonLog>)>` with line numbers and parse results
+
+**Key Design Decisions:**
+- Generic JSON structure (not Pino-specific) to support multiple log formats in the future
+- All fields stored as JSON values for maximum flexibility
+- Line-by-line processing to handle large files efficiently
+- Graceful error handling: parsing errors don't stop processing of remaining lines
+
+### Error Handling
+
+Located in `src/error.rs`:
+
+- Uses `thiserror` for clean error type definitions with `#[error]` attributes
+- Uses `rootcause` for error context chaining with `.attach()` method
+- Result type: `Result<T> = std::result::Result<T, Report<LogViewerError>>`
+- Error types: `FileRead`, `JsonParse`, `Database`, `InvalidLogFormat`, `TimestampError`, `Other`
+
 ### Key Components
 
 - **JSON Parser**: Handles Pino-style JSON logs with fields like `level`, `time`, `msg`, `pid`, `hostname`, etc.
-- **DuckDB Engine**: In-memory or file-based database for storing and querying log data with SQL
-- **Ratatui UI**: Terminal interface with features like log browsing, filtering, searching, and syntax highlighting
+- **DuckDB Engine**: In-memory or file-based database for storing and querying log data with SQL (not yet implemented)
+- **Ratatui UI**: Terminal interface with features like log browsing, filtering, searching, and syntax highlighting (not yet implemented)
 
 ## Dependencies
 
 - **duckdb** (v1.4.2): Embedded analytical database with bundled binary and Parquet support for log storage/querying
-- **rootcause** (v0.10.0): Error handling library with std features
+- **rootcause** (v0.10.0): Error handling library with context chaining support
+- **thiserror** (v2.0): Derive macro for error types with clean Display implementations
+- **serde** (v1.0): Serialization/deserialization framework with derive macros
+- **serde_json** (v1.0): JSON parsing and serialization
+- **jiff** (v0.1): Date and time library for timestamp conversions
 - **ratatui**: Terminal UI framework (to be added)
 
 ## Edition
