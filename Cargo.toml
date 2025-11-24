@@ -1,0 +1,8 @@
+[package]
+name = "log-viewer"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+duckdb = { version = "1.4.2", features = ["bundled", "parquet"] }
+rootcause = { version = "0.10.0", features = ["std"] }
