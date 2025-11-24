@@ -227,6 +227,8 @@ Err(e) => {
 
 ## Dependencies
 
+**IMPORTANT NOTE FOR CLAUDE CODE**: When adding or updating dependencies in `Cargo.toml`, **ALWAYS ask the user to run `cargo build` or `cargo test` manually** instead of running it yourself. DuckDB compilation takes 15-20 minutes due to the bundled C++ library, which will cause timeout issues and waste tokens. Let the user handle long-running cargo commands.
+
 ### Production Dependencies
 - **duckdb** (v1.4.2): Embedded analytical database with bundled binary and Parquet support for log storage/querying
 - **rootcause** (v0.10.0): Error handling library with context chaining support
