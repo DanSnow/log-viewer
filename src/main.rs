@@ -31,7 +31,7 @@ fn main() {
                     println!("  Message: {}", msg);
                 }
                 if let Some(level) = log.get_level() {
-                    println!("  Level: {}", level);
+                    println!("  Level: {} ({})", level, level.as_u64());
                 }
                 if let Some(timestamp) = log.timestamp() {
                     println!("  Timestamp: {}", timestamp);

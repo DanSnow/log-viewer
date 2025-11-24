@@ -36,7 +36,8 @@ mod tests {
         assert!(result.is_ok());
 
         let log = result.unwrap();
-        assert_eq!(log.get_level(), Some(30));
+        assert_eq!(log.get_level(), Some(crate::ingestion::LogLevel::Info));
+        assert_eq!(log.get_level_raw(), Some(30));
         assert_eq!(log.get_message(), Some("hello world"));
         assert_eq!(log.get_timestamp_ms(), Some(1531171074631));
     }
@@ -66,5 +67,19 @@ mod tests {
         let line = "not valid json";
         let result = parse_json_line(line);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_log_level_comparison() {
+        use crate::ingestion::LogLevel;
+
+        assert!(LogLevel::Error > LogLevel::Warn);
+        assert!(LogLevel::Warn > LogLevel::Info);
+        assert!(LogLevel::Info > LogLevel::Debug);
+        assert!(LogLevel::Debug > LogLevel::Trace);
+        assert!(LogLevel::Fatal > LogLevel::Error);
+
+        assert_eq!(LogLevel::Info.as_u64(), 30);
+        assert_eq!(LogLevel::Error.as_str(), "ERROR");
     }
 }

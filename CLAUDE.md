@@ -51,8 +51,13 @@ The application follows a three-layer architecture:
 Located in `src/ingestion/`:
 
 - **models.rs**: Defines `JsonLog` struct that stores all log fields in a flexible `HashMap<String, serde_json::Value>` format
-  - Provides helper methods: `get_timestamp_ms()`, `get_message()`, `get_level()`, `timestamp()`
+  - Provides helper methods: `get_timestamp_ms()`, `get_message()`, `get_level()`, `get_level_raw()`, `timestamp()`
   - Design is extensible: not tied to Pino format, can handle any JSON log structure
+  - Defines `LogLevel` enum for human-friendly log levels with comparison support:
+    - `Trace = 10`, `Debug = 20`, `Info = 30`, `Warn = 40`, `Error = 50`, `Fatal = 60`
+    - Implements `PartialOrd` and `Ord` for filtering (e.g., `level >= LogLevel::Warn`)
+    - Provides `as_str()` for display ("INFO", "ERROR", etc.) and `as_u64()` for numeric value
+    - `from_u64()` converts Pino numeric levels to enum
 
 - **parser.rs**: Contains `parse_json_line()` function
   - Parses JSON strings into `JsonLog` instances
