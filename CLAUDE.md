@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**IMPORTANT**: This file must be kept up-to-date as the project evolves. When implementing new features, refactoring architecture, or making significant changes, update the relevant sections in this file to help future Claude Code instances understand the codebase.
+
 ## Project Overview
 
 A terminal-based JSON log viewer specifically designed to handle structured JSON logs (e.g., from Pino logger). The application ingests JSON log data into DuckDB for powerful SQL-based filtering and analysis, with an interactive TUI (Terminal User Interface) built using Ratatui.
