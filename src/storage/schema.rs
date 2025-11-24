@@ -229,10 +229,47 @@ mod tests {
         builder.analyze_log(&log);
 
         let sql = builder.generate_create_table_sql("logs");
-        assert!(sql.contains("CREATE TABLE logs"));
-        assert!(sql.contains("id INTEGER PRIMARY KEY"));
-        assert!(sql.contains("level BIGINT"));
-        assert!(sql.contains("message TEXT"));
-        assert!(sql.contains("time BIGINT"));
+        insta::assert_snapshot!(sql);
+    }
+
+    #[test]
+    fn test_generate_create_table_sql_complex() {
+        let mut builder = SchemaBuilder::new();
+
+        // Test with multiple field types including JSON and normalization
+        let mut fields1 = HashMap::new();
+        fields1.insert("msg".to_string(), json!("hello"));
+        fields1.insert("level".to_string(), json!(30));
+        fields1.insert("time".to_string(), json!(1234567890));
+        fields1.insert("count".to_string(), json!(42));
+        fields1.insert("ratio".to_string(), json!(3.14));
+        fields1.insert("enabled".to_string(), json!(true));
+        fields1.insert("metadata".to_string(), json!({"foo": "bar"}));
+
+        let log1 = JsonLog::new(fields1);
+        builder.analyze_log(&log1);
+
+        let sql = builder.generate_create_table_sql("app_logs");
+        insta::assert_snapshot!(sql);
+    }
+
+    #[test]
+    fn test_generate_create_table_sql_with_type_merging() {
+        let mut builder = SchemaBuilder::new();
+
+        // First log has integer
+        let mut fields1 = HashMap::new();
+        fields1.insert("value".to_string(), json!(42));
+        let log1 = JsonLog::new(fields1);
+
+        // Second log has float - should merge to Float
+        let mut fields2 = HashMap::new();
+        fields2.insert("value".to_string(), json!(3.14));
+        let log2 = JsonLog::new(fields2);
+
+        builder.analyze_logs(&[log1, log2]);
+
+        let sql = builder.generate_create_table_sql("metrics");
+        insta::assert_snapshot!(sql);
     }
 }

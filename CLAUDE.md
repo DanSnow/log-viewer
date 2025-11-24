@@ -227,6 +227,7 @@ Err(e) => {
 
 ## Dependencies
 
+### Production Dependencies
 - **duckdb** (v1.4.2): Embedded analytical database with bundled binary and Parquet support for log storage/querying
 - **rootcause** (v0.10.0): Error handling library with context chaining support
 - **thiserror** (v2.0): Derive macro for error types with clean Display implementations
@@ -234,6 +235,14 @@ Err(e) => {
 - **serde_json** (v1.0): JSON parsing and serialization
 - **jiff** (v0.1): Date and time library for timestamp conversions
 - **ratatui**: Terminal UI framework (to be added)
+
+### Development Dependencies
+- **insta** (v1.41): Snapshot testing library for testing SQL generation and other text output
+  - Snapshots stored in `src/storage/snapshots/`
+  - Use `cargo insta review` to review new/changed snapshots
+  - Use `cargo insta test` to run all snapshot tests
+  - Use `cargo insta review --accept` to accept all pending snapshots
+  - Used for testing SQL CREATE TABLE statements to ensure schema generation is correct
 
 ## Edition
 

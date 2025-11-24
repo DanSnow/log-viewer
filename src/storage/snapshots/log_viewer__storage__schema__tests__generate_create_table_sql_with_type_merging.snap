@@ -1,0 +1,9 @@
+---
+source: src/storage/schema.rs
+expression: sql
+---
+CREATE SEQUENCE IF NOT EXISTS seq_metrics_id START 1;
+CREATE TABLE metrics (
+    id INTEGER PRIMARY KEY DEFAULT nextval('seq_metrics_id'),
+    value DOUBLE
+)

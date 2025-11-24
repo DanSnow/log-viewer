@@ -1,0 +1,15 @@
+---
+source: src/storage/schema.rs
+expression: sql
+---
+CREATE SEQUENCE IF NOT EXISTS seq_app_logs_id START 1;
+CREATE TABLE app_logs (
+    id INTEGER PRIMARY KEY DEFAULT nextval('seq_app_logs_id'),
+    count BIGINT,
+    enabled BOOLEAN,
+    level BIGINT,
+    message TEXT,
+    metadata TEXT,
+    ratio DOUBLE,
+    time BIGINT
+)

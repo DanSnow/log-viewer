@@ -1,0 +1,11 @@
+---
+source: src/storage/schema.rs
+expression: sql
+---
+CREATE SEQUENCE IF NOT EXISTS seq_logs_id START 1;
+CREATE TABLE logs (
+    id INTEGER PRIMARY KEY DEFAULT nextval('seq_logs_id'),
+    level BIGINT,
+    message TEXT,
+    time BIGINT
+)
