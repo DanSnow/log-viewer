@@ -36,7 +36,7 @@ impl<'a> Widget for FilterPanelWidget<'a> {
             Constraint::Min(8),    // Field schema table
             Constraint::Length(3), // Preset buttons
             Constraint::Length(3), // Input
-            Constraint::Length(4), // Error message
+            Constraint::Length(5), // Error message
             Constraint::Length(2), // Help text
         ])
         .split(area);
