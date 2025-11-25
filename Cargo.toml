@@ -13,6 +13,8 @@ thiserror = "2.0"
 ratatui = "0.29"
 crossterm = "0.28"
 tui-textarea = "0.7"
+log = "0.4"
+tui-logger = "0.14"
 
 [dev-dependencies]
 insta = "1.41"

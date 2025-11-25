@@ -38,6 +38,7 @@ pub struct App {
 
     // UI State
     pub show_help: bool,
+    pub show_debug_logs: bool,
     pub focus: Focus,
     pub should_quit: bool,
 }
@@ -65,9 +66,15 @@ impl App {
             show_filter_panel: false,
             filter_error: None,
             show_help: false,
+            show_debug_logs: false,
             focus: Focus::LogList,
             should_quit: false,
         })
+    }
+
+    /// Toggle debug logs panel
+    pub fn toggle_debug_logs(&mut self) {
+        self.show_debug_logs = !self.show_debug_logs;
     }
 
     /// Get the currently visible logs (all or filtered)

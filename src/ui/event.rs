@@ -106,6 +106,11 @@ fn handle_log_list_keys(app: &mut App, key: KeyEvent, page_height: usize) -> Res
             app.toggle_help();
         }
 
+        // Toggle debug logs
+        KeyCode::Char('L') => {
+            app.toggle_debug_logs();
+        }
+
         _ => {}
     }
 

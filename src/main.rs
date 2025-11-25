@@ -11,6 +11,12 @@ use storage::LogDatabase;
 use ui::{cleanup_terminal, handle_events, setup_terminal, App};
 
 fn main() -> Result<()> {
+    // Initialize tui-logger
+    tui_logger::init_logger(log::LevelFilter::Debug).unwrap();
+    tui_logger::set_default_level(log::LevelFilter::Debug);
+
+    log::info!("Starting log-viewer application");
+
     // Parse command-line arguments
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 2 {
@@ -19,6 +25,7 @@ fn main() -> Result<()> {
     }
 
     let log_file = &args[1];
+    log::info!("Loading log file: {}", log_file);
 
     // Load and parse logs
     let logs = load_logs(log_file)?;
@@ -152,13 +159,22 @@ fn render_main_content(
     app: &App,
     area: ratatui::layout::Rect,
 ) {
-    use ui::components::{log_detail, log_list};
+    use ui::components::{debug_logs, log_detail, log_list};
+
+    // If debug logs are shown, split the screen
+    let (main_area, debug_area) = if app.show_debug_logs {
+        let chunks =
+            Layout::vertical([Constraint::Percentage(70), Constraint::Percentage(30)]).split(area);
+        (chunks[0], Some(chunks[1]))
+    } else {
+        (area, None)
+    };
 
     // Create layout based on whether detail panel is shown
     if app.show_detail_panel {
         // Split view: logs on top, detail on bottom
         let chunks = Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)])
-            .split(area);
+            .split(main_area);
 
         // Render log list
         let logs = app.current_logs();
@@ -179,7 +195,18 @@ fn render_main_content(
         // Full screen log list
         let logs = app.current_logs();
         let title = create_log_list_title(app);
-        log_list::render_log_list(logs, app.selected_index, title, area, frame.buffer_mut());
+        log_list::render_log_list(
+            logs,
+            app.selected_index,
+            title,
+            main_area,
+            frame.buffer_mut(),
+        );
+    }
+
+    // Render debug logs if enabled
+    if let Some(debug_area) = debug_area {
+        debug_logs::render_debug_logs(debug_area, frame.buffer_mut());
     }
 }
 

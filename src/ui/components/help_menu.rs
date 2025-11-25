@@ -37,6 +37,7 @@ impl HelpMenuWidget {
             Line::from("  f           - Toggle filter panel"),
             Line::from("  /           - Focus filter input"),
             Line::from("  c           - Clear active filter"),
+            Line::from("  L           - Toggle debug logs panel"),
             Line::from("  ?           - Toggle this help menu"),
             Line::from("  q / Esc     - Quit application"),
             Line::from(""),
