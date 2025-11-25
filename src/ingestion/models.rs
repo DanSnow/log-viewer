@@ -62,15 +62,27 @@ impl JsonLog {
     }
 
     pub fn get_timestamp_ms(&self) -> Option<i64> {
-        self.fields.get("time")?.as_i64()
+        // Check normalized field name first, then original
+        self.fields
+            .get("time")
+            .or_else(|| self.fields.get("timestamp"))
+            .and_then(|v| v.as_i64())
     }
 
     pub fn get_message(&self) -> Option<&str> {
-        self.fields.get("msg")?.as_str()
+        // Check normalized field name first, then original
+        self.fields
+            .get("message")
+            .or_else(|| self.fields.get("msg"))
+            .and_then(|v| v.as_str())
     }
 
     pub fn get_level_raw(&self) -> Option<u64> {
-        self.fields.get("level")?.as_u64()
+        // Check normalized field name first, then original
+        self.fields
+            .get("level")
+            .or_else(|| self.fields.get("lvl"))
+            .and_then(|v| v.as_u64())
     }
 
     pub fn get_level(&self) -> Option<LogLevel> {
