@@ -219,11 +219,84 @@ Err(e) => {
 - Automatic error conversion via `#[from]` in `thiserror`
 - Beautiful error formatting with color support
 
-### Key Components
+### Presentation Layer (Implemented)
 
-- **JSON Parser**: Handles Pino-style JSON logs with fields like `level`, `time`, `msg`, `pid`, `hostname`, etc.
-- **DuckDB Engine**: In-memory or file-based database for storing and querying log data with SQL (implemented)
-- **Ratatui UI**: Terminal interface with features like log browsing, filtering, searching, and syntax highlighting (not yet implemented)
+Located in `src/ui/`:
+
+The TUI (Terminal User Interface) is built with Ratatui and provides an interactive experience for viewing and filtering logs.
+
+**Architecture:**
+
+- **terminal.rs**: Terminal setup/teardown utilities
+  - `setup_terminal()`: Enables raw mode and alternate screen
+  - `cleanup_terminal()`: Restores terminal to normal state
+  - `Tui` type alias for `Terminal<CrosstermBackend<Stdout>>`
+
+- **app.rs**: Application state and business logic
+  - `App` struct holds all application state:
+    - Database connection and logs (all + filtered)
+    - UI state (selected index, scroll offset, panel visibility)
+    - Filter state (active filter, input widget, errors)
+    - Field schema for reference panel
+  - Methods for navigation (move_up/down, jump_to_first/last, scroll)
+  - Methods for filtering (apply_filter, clear_filter, preset filters)
+  - Methods for UI state management (toggle panels, focus switching)
+
+- **event.rs**: Keyboard event handling with vim-style keybindings
+  - `handle_events()`: Main event loop handler
+  - Vim keybindings: j/k (up/down), g/G (first/last), Ctrl+d/u/f/b (page navigation)
+  - Filter operations: / (focus filter), f (toggle filter panel), c (clear filter)
+  - UI toggles: d (detail panel), ? (help menu), q/Esc (quit)
+
+- **components/**: UI rendering components
+  - **log_list.rs**: Compact log list view
+    - Displays logs with color-coded levels (TRACE=gray, DEBUG=blue, INFO=cyan, WARN=yellow, ERROR=red, FATAL=bright red)
+    - Shows timestamp, level badge, message, and field count
+    - Highlights selected log
+  - **log_detail.rs**: Detailed log view
+    - Pretty-printed JSON with syntax highlighting
+    - Shows all fields with proper indentation
+    - Color-coded keys (cyan) and values (green)
+  - **filter_panel.rs**: SQL filter interface
+    - Field schema table showing available fields and types
+    - Preset filter buttons (Errors Only, Warnings+, Last Hour, Custom)
+    - SQL WHERE clause input with syntax highlighting
+    - Error message display for invalid SQL
+  - **help_menu.rs**: Centered help overlay
+    - Lists all keybindings and actions
+    - SQL filter examples
+    - Dismissible with ? or Esc
+
+**Main Event Loop (main.rs):**
+
+1. Parse command-line arguments (file path)
+2. Load and parse log file
+3. Create in-memory DuckDB database
+4. Detect schema and insert logs
+5. Setup terminal in raw mode
+6. Initialize App state
+7. Event loop:
+   - Draw UI (render_ui)
+   - Handle keyboard events
+   - Update app state
+   - Repeat until quit
+8. Cleanup terminal on exit
+
+**UI Layout:**
+
+- **Default view**: Full-screen log list
+- **With detail panel (press 'd')**: Split screen (50% logs, 50% detail)
+- **Filter panel (press 'f')**: Centered overlay modal
+- **Help menu (press '?')**: Centered overlay modal (highest priority)
+
+**Key Design Decisions:**
+
+- All logs loaded into memory at startup for fast navigation
+- SQL filtering via DuckDB queries (returns new result set)
+- Vim-style keybindings for power users
+- Modal overlays for help and filter panel
+- Color-coded log levels for visual distinction
+- Preset filters for common use cases
 
 ## Dependencies
 
@@ -236,7 +309,9 @@ Err(e) => {
 - **serde** (v1.0): Serialization/deserialization framework with derive macros
 - **serde_json** (v1.0): JSON parsing and serialization
 - **jiff** (v0.1): Date and time library for timestamp conversions
-- **ratatui**: Terminal UI framework (to be added)
+- **ratatui** (v0.29): Terminal UI framework for building rich TUI applications
+- **crossterm** (v0.28): Cross-platform terminal manipulation library (backend for Ratatui)
+- **tui-textarea** (v0.7): Text input widget for Ratatui with cursor support
 
 ### Development Dependencies
 - **insta** (v1.41): Snapshot testing library for testing SQL generation and other text output

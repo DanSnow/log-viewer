@@ -1,7 +1,7 @@
 use crate::error::{LogViewerError, Result};
 use crate::ingestion::JsonLog;
-use crate::storage::schema::{normalize_field_name, SchemaBuilder};
-use duckdb::{params_from_iter, Connection};
+use crate::storage::schema::{SchemaBuilder, normalize_field_name};
+use duckdb::{Connection, params_from_iter};
 use rootcause::prelude::*;
 use serde_json::Value;
 
@@ -65,14 +65,15 @@ impl LogDatabase {
     /// Insert a single log entry
     pub fn insert_log(&self, log: &JsonLog) -> Result<()> {
         if self.field_names.is_empty() {
-            return Err(LogViewerError::Database(duckdb::Error::InvalidParameterCount(
-                0,
-                0,
-            )))
+            return Err(LogViewerError::Database(
+                duckdb::Error::InvalidParameterCount(0, 0),
+            ))
             .attach("Cannot insert log: table not created yet. Call create_table_from_logs first");
         }
 
-        let placeholders: Vec<String> = (1..=self.field_names.len()).map(|i| format!("?{}", i)).collect();
+        let placeholders: Vec<String> = (1..=self.field_names.len())
+            .map(|i| format!("?{}", i))
+            .collect();
         let insert_sql = format!(
             "INSERT INTO {} ({}) VALUES ({})",
             self.table_name,
@@ -93,11 +94,12 @@ impl LogDatabase {
     /// Insert multiple logs in a batch (using a transaction for efficiency)
     pub fn insert_logs(&mut self, logs: &[JsonLog]) -> Result<usize> {
         if self.field_names.is_empty() {
-            return Err(LogViewerError::Database(duckdb::Error::InvalidParameterCount(
-                0,
-                0,
-            )))
-            .attach("Cannot insert logs: table not created yet. Call create_table_from_logs first");
+            return Err(LogViewerError::Database(
+                duckdb::Error::InvalidParameterCount(0, 0),
+            ))
+            .attach(
+                "Cannot insert logs: table not created yet. Call create_table_from_logs first",
+            );
         }
 
         // Extract all params before starting transaction to avoid borrow issues
@@ -112,7 +114,9 @@ impl LogDatabase {
             .map_err(LogViewerError::from)
             .attach("Failed to start transaction")?;
 
-        let placeholders: Vec<String> = (1..=self.field_names.len()).map(|i| format!("?{}", i)).collect();
+        let placeholders: Vec<String> = (1..=self.field_names.len())
+            .map(|i| format!("?{}", i))
+            .collect();
         let insert_sql = format!(
             "INSERT INTO {} ({}) VALUES ({})",
             self.table_name,
@@ -124,7 +128,9 @@ impl LogDatabase {
         for params in all_params {
             tx.execute(&insert_sql, params_from_iter(params.iter()))
                 .map_err(LogViewerError::from)
-                .attach_with(|| format!("Failed to insert log in batch with SQL: {}", insert_sql))?;
+                .attach_with(|| {
+                    format!("Failed to insert log in batch with SQL: {}", insert_sql)
+                })?;
 
             inserted += 1;
         }
@@ -175,9 +181,11 @@ impl LogDatabase {
     pub fn count_logs(&self) -> Result<usize> {
         let count: usize = self
             .conn
-            .query_row(&format!("SELECT COUNT(*) FROM {}", self.table_name), [], |row| {
-                row.get(0)
-            })
+            .query_row(
+                &format!("SELECT COUNT(*) FROM {}", self.table_name),
+                [],
+                |row| row.get(0),
+            )
             .map_err(LogViewerError::from)
             .attach("Failed to count logs")?;
 
@@ -192,6 +200,117 @@ impl LogDatabase {
     /// Get the field names
     pub fn field_names(&self) -> &[String] {
         &self.field_names
+    }
+
+    /// Query logs with optional WHERE clause
+    /// Returns JsonLog instances constructed from database rows
+    pub fn query_logs(&self, where_clause: Option<&str>) -> Result<Vec<JsonLog>> {
+        let sql = if let Some(where_clause) = where_clause {
+            format!("SELECT * FROM {} WHERE {}", self.table_name, where_clause)
+        } else {
+            format!("SELECT * FROM {}", self.table_name)
+        };
+
+        let mut stmt = self
+            .conn
+            .prepare(&sql)
+            .map_err(LogViewerError::from)
+            .attach_with(|| format!("Failed to prepare query: {}", sql))?;
+
+        stmt.execute([])
+            .map_err(LogViewerError::from)
+            .attach_with(|| format!("Fail to execute query: {sql}"))?;
+
+        let column_count = stmt.column_count();
+        let column_names: Vec<String> = (0..column_count)
+            .map(|i| {
+                stmt.column_name(i)
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|_| "unknown".to_string())
+            })
+            .collect();
+
+        let rows = stmt
+            .query_map([], |row| {
+                let mut fields = std::collections::HashMap::new();
+
+                for (i, col_name) in column_names.iter().enumerate() {
+                    // Skip the id column
+                    if col_name == "id" {
+                        continue;
+                    }
+
+                    // Try to get the value as different types
+                    let value: Value = if let Ok(s) = row.get::<_, String>(i) {
+                        Value::String(s)
+                    } else if let Ok(i_val) = row.get::<_, i64>(i) {
+                        Value::Number(i_val.into())
+                    } else if let Ok(f) = row.get::<_, f64>(i) {
+                        serde_json::Number::from_f64(f)
+                            .map(Value::Number)
+                            .unwrap_or(Value::Null)
+                    } else if let Ok(b) = row.get::<_, bool>(i) {
+                        Value::Bool(b)
+                    } else {
+                        Value::Null
+                    };
+
+                    fields.insert(col_name.clone(), value);
+                }
+
+                Ok(JsonLog::new(fields))
+            })
+            .map_err(LogViewerError::from)
+            .attach_with(|| format!("Failed to query logs with SQL: {}", sql))?;
+
+        let logs: std::result::Result<Vec<_>, _> = rows.collect();
+        logs.map_err(LogViewerError::from)
+            .attach("Failed to collect query results")
+    }
+
+    /// Get the schema (field names and types) for the UI
+    pub fn get_schema(&self) -> Result<Vec<(String, crate::storage::FieldType)>> {
+        use crate::storage::FieldType;
+
+        let sql = format!("PRAGMA table_info({})", self.table_name);
+        let mut stmt = self
+            .conn
+            .prepare(&sql)
+            .map_err(LogViewerError::from)
+            .attach_with(|| format!("Failed to prepare schema query: {}", sql))?;
+
+        let rows = stmt
+            .query_map([], |row| {
+                let name: String = row.get(1)?;
+                let type_str: String = row.get(2)?;
+                Ok((name, type_str))
+            })
+            .map_err(LogViewerError::from)
+            .attach("Failed to query table schema")?;
+
+        let mut schema = Vec::new();
+        for row_result in rows {
+            let (name, type_str) = row_result
+                .map_err(LogViewerError::from)
+                .attach("Failed to read schema row")?;
+
+            // Skip the id column
+            if name == "id" {
+                continue;
+            }
+
+            let field_type = match type_str.as_str() {
+                "TEXT" => FieldType::Text,
+                "BIGINT" => FieldType::Integer,
+                "DOUBLE" => FieldType::Float,
+                "BOOLEAN" => FieldType::Boolean,
+                _ => FieldType::Text,
+            };
+
+            schema.push((name, field_type));
+        }
+
+        Ok(schema)
     }
 }
 
