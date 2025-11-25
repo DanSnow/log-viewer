@@ -298,6 +298,54 @@ The TUI (Terminal User Interface) is built with Ratatui and provides an interact
 - Color-coded log levels for visual distinction
 - Preset filters for common use cases
 
+### Logging and Debugging
+
+The application uses **tracing** for structured, contextual logging throughout the codebase.
+
+**Setup (main.rs):**
+
+```rust
+use tracing_subscriber::layer::SubscriberExt;
+
+// Initialize tracing subscriber with tui-logger support
+// This bridges tracing events to tui-logger for the debug panel
+let tui_logger_layer = tui_logger::tracing_subscriber_layer();
+
+let subscriber = tracing_subscriber::fmt()
+    .with_max_level(tracing::Level::DEBUG)
+    .finish()
+    .with(tui_logger_layer);
+
+tracing::subscriber::set_global_default(subscriber)
+    .expect("Failed to set tracing subscriber");
+
+// Set tui-logger default level
+tui_logger::set_default_level(tui_logger::LevelFilter::Debug);
+```
+
+**Usage Patterns:**
+
+- `tracing::info!()` - High-level operations (table creation, log insertion, query results)
+- `tracing::debug!()` - Detailed operation info (SQL statements, field counts)
+- `tracing::trace!()` - Very detailed tracing (individual field parsing, row-by-row processing)
+- `tracing::warn!()` - Non-fatal issues (unparsable values, missing fields)
+- `tracing::error!()` - Fatal errors (not currently used, errors are handled via Result)
+
+**Debug Panel:**
+
+- Press 'L' to toggle the debug logs panel (bottom 30% of screen)
+- Shows all tracing events in real-time with color-coded levels
+- Useful for debugging SQL queries, schema detection, and data flow
+
+**Example Logging:**
+
+```rust
+tracing::info!("Analyzing {} sample logs to detect schema", sample_logs.len());
+tracing::debug!("Creating table with SQL: {}", create_sql);
+tracing::trace!("Column '{}' [{}]: String = {:?}", col_name, i, s);
+tracing::warn!("Column '{}' [{}]: Could not parse, using Null", col_name, i);
+```
+
 ## Dependencies
 
 **IMPORTANT NOTE FOR CLAUDE CODE**: When adding or updating dependencies in `Cargo.toml`, **ALWAYS ask the user to run `cargo build` or `cargo test` manually** instead of running it yourself. DuckDB compilation takes 15-20 minutes due to the bundled C++ library, which will cause timeout issues and waste tokens. Let the user handle long-running cargo commands.
@@ -312,6 +360,9 @@ The TUI (Terminal User Interface) is built with Ratatui and provides an interact
 - **ratatui** (v0.29): Terminal UI framework for building rich TUI applications
 - **crossterm** (v0.28): Cross-platform terminal manipulation library (backend for Ratatui)
 - **tui-textarea** (v0.7): Text input widget for Ratatui with cursor support
+- **tracing** (v0.1): Application-level tracing framework for structured, contextual logging
+- **tracing-subscriber** (v0.3): Utilities for implementing tracing subscribers with env-filter support
+- **tui-logger** (v0.14): TUI widget for displaying logs in the terminal, with tracing-support feature enabled
 
 ### Development Dependencies
 - **insta** (v1.41): Snapshot testing library for testing SQL generation and other text output

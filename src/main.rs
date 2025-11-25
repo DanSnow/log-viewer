@@ -8,14 +8,20 @@ use ingestion::LogFileReader;
 use ratatui::layout::{Constraint, Layout};
 use rootcause::prelude::ResultExt;
 use storage::LogDatabase;
-use ui::{cleanup_terminal, handle_events, setup_terminal, App};
+use tracing::level_filters::LevelFilter;
+use tracing_subscriber::prelude::*;
+use ui::{App, cleanup_terminal, handle_events, setup_terminal};
 
 fn main() -> Result<()> {
-    // Initialize tui-logger
-    tui_logger::init_logger(log::LevelFilter::Debug).unwrap();
-    tui_logger::set_default_level(log::LevelFilter::Debug);
+    let _ = tui_logger::init_logger(tui_logger::LevelFilter::Debug);
 
-    log::info!("Starting log-viewer application");
+    // Initialize tracing subscriber with tui-logger support
+    // This bridges tracing events to tui-logger for the debug panel
+    let tui_logger_layer = tui_logger::tracing_subscriber_layer().with_filter(LevelFilter::DEBUG);
+
+    tracing_subscriber::registry().with(tui_logger_layer).init();
+
+    tracing::info!("Starting log-viewer application");
 
     // Parse command-line arguments
     let args: Vec<String> = std::env::args().collect();
@@ -25,7 +31,7 @@ fn main() -> Result<()> {
     }
 
     let log_file = &args[1];
-    log::info!("Loading log file: {}", log_file);
+    tracing::info!("Loading log file: {}", log_file);
 
     // Load and parse logs
     let logs = load_logs(log_file)?;
@@ -154,11 +160,7 @@ fn render_ui(frame: &mut ratatui::Frame, app: &App) {
     }
 }
 
-fn render_main_content(
-    frame: &mut ratatui::Frame,
-    app: &App,
-    area: ratatui::layout::Rect,
-) {
+fn render_main_content(frame: &mut ratatui::Frame, app: &App, area: ratatui::layout::Rect) {
     use ui::components::{debug_logs, log_detail, log_list};
 
     // If debug logs are shown, split the screen
@@ -179,7 +181,13 @@ fn render_main_content(
         // Render log list
         let logs = app.current_logs();
         let title = create_log_list_title(app);
-        log_list::render_log_list(logs, app.selected_index, title, chunks[0], frame.buffer_mut());
+        log_list::render_log_list(
+            logs,
+            app.selected_index,
+            title,
+            chunks[0],
+            frame.buffer_mut(),
+        );
 
         // Render log detail
         let selected_log = app.selected_log();

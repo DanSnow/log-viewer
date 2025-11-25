@@ -47,14 +47,14 @@ impl LogDatabase {
             logs
         };
 
-        log::info!("Analyzing {} sample logs to detect schema", sample_logs.len());
+        tracing::info!("Analyzing {} sample logs to detect schema", sample_logs.len());
 
         let mut schema_builder = SchemaBuilder::new();
         schema_builder.analyze_logs(sample_logs);
 
         let create_sql = schema_builder.generate_create_table_sql(&self.table_name);
 
-        log::debug!("Creating table with SQL: {}", create_sql);
+        tracing::debug!("Creating table with SQL: {}", create_sql);
 
         self.conn
             .execute(&create_sql, [])
@@ -63,7 +63,7 @@ impl LogDatabase {
 
         self.field_names = schema_builder.field_names();
 
-        log::info!("Created table '{}' with {} fields: {:?}",
+        tracing::info!("Created table '{}' with {} fields: {:?}",
             self.table_name, self.field_names.len(), self.field_names);
 
         Ok(())
@@ -109,7 +109,7 @@ impl LogDatabase {
             );
         }
 
-        log::info!("Inserting {} logs into database", logs.len());
+        tracing::info!("Inserting {} logs into database", logs.len());
 
         // Extract all params before starting transaction to avoid borrow issues
         let all_params: Vec<_> = logs
@@ -118,7 +118,7 @@ impl LogDatabase {
             .map(|(idx, log)| {
                 let params = self.extract_params_from_log(log);
                 if idx == 0 {
-                    log::debug!("First log has {} fields: {:?}", log.fields.len(), log.fields.keys().collect::<Vec<_>>());
+                    tracing::debug!("First log has {} fields: {:?}", log.fields.len(), log.fields.keys().collect::<Vec<_>>());
                 }
                 params
             })
@@ -140,7 +140,7 @@ impl LogDatabase {
             placeholders.join(", ")
         );
 
-        log::debug!("Insert SQL: {}", insert_sql);
+        tracing::debug!("Insert SQL: {}", insert_sql);
 
         let mut inserted = 0;
         for params in all_params {
@@ -157,7 +157,7 @@ impl LogDatabase {
             .map_err(LogViewerError::from)
             .attach("Failed to commit transaction")?;
 
-        log::info!("Successfully inserted {} logs", inserted);
+        tracing::info!("Successfully inserted {} logs", inserted);
 
         Ok(inserted)
     }
@@ -231,7 +231,7 @@ impl LogDatabase {
             format!("SELECT * FROM {}", self.table_name)
         };
 
-        log::debug!("Executing query: {}", sql);
+        tracing::debug!("Executing query: {}", sql);
 
         let mut stmt = self
             .conn
@@ -252,7 +252,7 @@ impl LogDatabase {
             })
             .collect();
 
-        log::debug!("Query returned {} columns: {:?}", column_count, column_names);
+        tracing::debug!("Query returned {} columns: {:?}", column_count, column_names);
 
         let rows = stmt
             .query_map([], |row| {
@@ -266,28 +266,28 @@ impl LogDatabase {
 
                     // Try to get the value as different types
                     let value: Value = if let Ok(s) = row.get::<_, String>(i) {
-                        log::trace!("Column '{}' [{}]: String = {:?}", col_name, i, s);
+                        tracing::trace!("Column '{}' [{}]: String = {:?}", col_name, i, s);
                         Value::String(s)
                     } else if let Ok(i_val) = row.get::<_, i64>(i) {
-                        log::trace!("Column '{}' [{}]: i64 = {}", col_name, i, i_val);
+                        tracing::trace!("Column '{}' [{}]: i64 = {}", col_name, i, i_val);
                         Value::Number(i_val.into())
                     } else if let Ok(f) = row.get::<_, f64>(i) {
-                        log::trace!("Column '{}' [{}]: f64 = {}", col_name, i, f);
+                        tracing::trace!("Column '{}' [{}]: f64 = {}", col_name, i, f);
                         serde_json::Number::from_f64(f)
                             .map(Value::Number)
                             .unwrap_or(Value::Null)
                     } else if let Ok(b) = row.get::<_, bool>(i) {
-                        log::trace!("Column '{}' [{}]: bool = {}", col_name, i, b);
+                        tracing::trace!("Column '{}' [{}]: bool = {}", col_name, i, b);
                         Value::Bool(b)
                     } else {
-                        log::warn!("Column '{}' [{}]: Could not parse, using Null", col_name, i);
+                        tracing::warn!("Column '{}' [{}]: Could not parse, using Null", col_name, i);
                         Value::Null
                     };
 
                     fields.insert(col_name.clone(), value);
                 }
 
-                log::trace!("Parsed log with {} fields: {:?}", fields.len(), fields.keys().collect::<Vec<_>>());
+                tracing::trace!("Parsed log with {} fields: {:?}", fields.len(), fields.keys().collect::<Vec<_>>());
                 Ok(JsonLog::new(fields))
             })
             .map_err(LogViewerError::from)
@@ -297,7 +297,7 @@ impl LogDatabase {
         let logs = logs.map_err(LogViewerError::from)
             .attach("Failed to collect query results")?;
 
-        log::info!("Query returned {} log entries", logs.len());
+        tracing::info!("Query returned {} log entries", logs.len());
 
         Ok(logs)
     }
