@@ -2,6 +2,13 @@
 name = "log-viewer"
 version = "0.1.0"
 edition = "2024"
+authors = ["DanSnow"]
+license = "MIT"
+description = "A blazingly fast terminal-based JSON log viewer with SQL-powered filtering"
+repository = "https://github.com/DanSnow/log-viewer"
+homepage = "https://github.com/DanSnow/log-viewer"
+keywords = ["log", "viewer", "tui", "sql", "json"]
+categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
 duckdb = { version = "1.4.2", features = ["bundled", "parquet"] }
@@ -19,3 +26,8 @@ tui-logger = { version = "0.14", features = ["tracing-support"] }
 
 [dev-dependencies]
 insta = "1.41"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"

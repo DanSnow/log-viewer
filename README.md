@@ -20,6 +20,22 @@ A blazingly fast terminal-based JSON log viewer with SQL-powered filtering, buil
 
 ## Installation
 
+### Pre-built Binaries (Recommended)
+
+Install using the automated installer:
+
+#### Linux & macOS
+```bash
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/DanSnow/log-viewer/releases/latest/download/log-viewer-installer.sh | sh
+```
+
+#### Windows (PowerShell)
+```powershell
+powershell -c "irm https://github.com/DanSnow/log-viewer/releases/latest/download/log-viewer-installer.ps1 | iex"
+```
+
+Or download pre-built binaries directly from the [releases page](https://github.com/DanSnow/log-viewer/releases).
+
 ### Using Cargo
 
 ```bash
